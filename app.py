@@ -29,6 +29,7 @@ low, high = get_range_for_difficulty(difficulty)
 st.sidebar.caption(f"Range: {low} to {high}")
 st.sidebar.caption(f"Attempts allowed: {attempt_limit}")
 
+#FIX: When starting a new game, the secret number is generated within the correct range for the selected difficulty level
 def start_new_game():
     st.session_state.secret = random.randint(low, high)
     st.session_state.attempts = 0
@@ -60,6 +61,7 @@ if "history" not in st.session_state:
 
 st.subheader("Make a guess")
 
+#FIX: Had a range of the numbers that the user could guess
 st.info(
     f"Guess a number between {low} and {high}. "
     f"Attempts left: {attempt_limit - st.session_state.attempts}"
@@ -85,6 +87,7 @@ with col2:
 with col3:
     show_hint = st.checkbox("Show hint", value=True)
 
+#FIX: The game will actually start a new one when the user clicks the "New Game" button
 if new_game:
     start_new_game()
     st.success("New game started.")
@@ -97,31 +100,26 @@ if st.session_state.status != "playing":
         st.error("Game over. Start a new game to try again.")
     st.stop()
 
+#FIX: Checks if the user is going under or over the range of numbers
 if submit:
-    ok, guess_int, err = parse_guess(raw_guess)
+    ok, guess_int, err = parse_guess(raw_guess, low, high)
 
     if not ok:
-        # Text that isn't a number doesn't use up an attempt.
+        # Invalid or out-of-range input doesn't use up an attempt.
         st.error(err)
     else:
-        st.session_state.attempts += 1
         st.session_state.history.append(guess_int)
 
-        if not (low <= guess_int <= high):
-            # Out-of-range guesses still cost an attempt: the range is shown.
-            outcome = "Out of Range"
-            st.error(f"Guess must be between {low} and {high}. That still counts as an attempt.")
-        else:
-            outcome, message = check_guess(guess_int, st.session_state.secret)
+        outcome, message = check_guess(guess_int, st.session_state.secret)
 
-            if show_hint:
-                st.warning(message)
+        if show_hint:
+            st.warning(message)
 
-            st.session_state.score = update_score(
-                current_score=st.session_state.score,
-                outcome=outcome,
-                attempt_number=st.session_state.attempts,
-            )
+        st.session_state.score = update_score(
+            current_score=st.session_state.score,
+            outcome=outcome,
+            attempt_number=st.session_state.attempts,
+        )
 
         if outcome == "Win":
             st.balloons()
@@ -130,13 +128,14 @@ if submit:
                 f"You won! The secret was {st.session_state.secret}. "
                 f"Final score: {st.session_state.score}"
             )
-        elif st.session_state.attempts >= attempt_limit:
-            st.session_state.status = "lost"
-            st.error(
-                f"Out of attempts! "
-                f"The secret was {st.session_state.secret}. "
-                f"Score: {st.session_state.score}"
-            )
+        else:
+            if st.session_state.attempts >= attempt_limit:
+                st.session_state.status = "lost"
+                st.error(
+                    f"Out of attempts! "
+                    f"The secret was {st.session_state.secret}. "
+                    f"Score: {st.session_state.score}"
+                )
 
 st.divider()
 st.caption("Built by an AI that claims this code is production-ready.")
